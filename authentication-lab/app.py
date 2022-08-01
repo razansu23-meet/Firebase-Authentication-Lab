@@ -3,49 +3,60 @@ from flask import session as login_session
 import pyrebase
 
 config = {
+  "apiKey": "AIzaSyByNBMlAb6EljEkAVSXveD0fved4XDuu44",
 
-  "apiKey": "AIzaSyA2Lp4oqWtkPy7g--SsG5oadKlgMqmZ74w",
+  "authDomain": "labmeet-c935b.firebaseapp.com",
 
-  "authDomain": "cs-summer.firebaseapp.com",
+  "databaseURL": "https://labmeet-c935b-default-rtdb.europe-west1.firebasedatabase.app",
 
-  "projectId": "cs-summer",
+  "projectId": "labmeet-c935b",
 
-  "storageBucket": "cs-summer.appspot.com",
+  "storageBucket": "labmeet-c935b.appspot.com",
 
-  "messagingSenderId": "252748538991",
+  "messagingSenderId": "827991363103",
 
-  "appId": "1:252748538991:web:e5c8261c5869b166f1199a",
+  "appId": "1:827991363103:web:61b1333546351937078f2a",
 
-  "measurementId": "G-LRWHHLNS0L" ,
-  "databaseURL" : "https://cs-summer-default-rtdb.europe-west1.firebasedatabase.app/"
+  "measurementId": "G-8C0DDE2BH5"
 
 }
 
+
+
+
 firebase = pyrebase.initialize_app(config)
 auth = firebase.auth()
+db = firebase.database()
+
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 app.config['SECRET_KEY'] = 'super-secret-key'
-db = firebase.database()
 
 @app.route('/', methods=['GET', 'POST'])
 def signup():
-    return render_template("signup.html")
     error = ""
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
+        username = request.form['username']
+        fullname = request.form['fullname']
+        bio = request.form['bio']
+        user={"email" : email , "username" : username , "password" : password , "fullname" : fullname}
+        
         try:
-            login_session['user'] = auth.create_user_with_email_and_password(email, password)
+            login_session['user'] = auth.create_user_with_email_and_password(email, password )
+            db.child("Users").child(login_session['user']['localId']).set(user)
             return redirect(url_for('signin'))
         except:
             error = "Authentication failed"
             return render_template("signup.html")
+    else:
+        return render_template("signup.html")
+
     
 
 @app.route('/signin', methods=['GET', 'POST'])
 def signin():
-    return render_template("signin.html")
     error = ""
     if request.method == 'POST':
         email = request.form['email']
@@ -56,11 +67,32 @@ def signin():
         except:
             error = "Authentication failed"
             return render_template("signin.html")
+    else:
+        return render_template("signin.html")
     
 
 @app.route('/add_tweet', methods=['GET', 'POST'])
 def add_tweet():
+    error = ""
+    if request.method == 'POST':
+        try:
+            title = request.form['title']
+            text = request.form['text']
+            tweet = {"title": title , "text":text , "uid":login_session['user']['localId']}
+            db.child("Tweets").child(login_session['user']['localId']).push(user)
+            return redirect(url_for('all_tweets'))
+        except:
+            error = "Authentication failed"
+            return render_template("add_tweet.html")
     return render_template("add_tweet.html")
+
+@app.route('/all_tweets', methods=['GET', 'POST'])
+def all_tweets():
+    
+    a = db.child("Tweets").child(login_session['user']['localId']).get().val()
+    return render_template("tweets.html" ,a=a )
+
+
 
 
 if __name__ == '__main__':
